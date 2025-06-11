@@ -165,14 +165,14 @@ float bench_memread_kernel(void * B, void * A, int64_t dwords)
     CALL(hipEventCreate(&start_ev));
     CALL(hipEventCreate(&stop_ev));
 
-    std::cout << gx << " " << bx << " " << arg_size << std::endl;
-
     for(int i=0;i<WARMUP;i++)
+	//memread_kernel<VEC, UNROLL><<<gx, bx>>>(reinterpret_cast<VEC*>(B), reinterpret_cast<VEC*>(A), issues_per_block, iters);
 	    CALL(hipModuleLaunchKernel(memread_kernel_asm, gx,1,1, bx,1,1,  0, 0, NULL, (void**)&config));
 
     CALL(hipEventRecord(start_ev, 0));
     for(int i=0;i<LOOP;i++)
-	    CALL(hipModuleLaunchKernel(memread_kernel_asm, gx,1,1, bx,1,1,  0, 0, NULL, (void**)&config ));
+	//memread_kernel<VEC, UNROLL><<<gx, bx>>>(reinterpret_cast<VEC*>(B), reinterpret_cast<VEC*>(A), issues_per_block, iters);
+	CALL(hipModuleLaunchKernel(memread_kernel_asm, gx,1,1, bx,1,1,  0, 0, NULL, (void**)&config ));
     CALL(hipEventRecord( stop_ev, 0 ));
     CALL(hipEventSynchronize(stop_ev));
 

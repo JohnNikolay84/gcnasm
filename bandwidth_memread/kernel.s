@@ -3,23 +3,60 @@
 .p2align 8
 .type kernel_func,@function
 
-.set k_bdx,     256     ; should be 256 in bdx
-.set k_end,     12
-.set v_end,     128     ; hard code to this to let occupancy to be 1.  65536 / 256 = 256
 .set s_A,       12
 .set s_i_per_block,    14
 .set s_iter, 15
 .set s_tmp,     16
-.set s_iter_2,  24
-.set s_end,     31
-.set a_end,     128
+.set s_accum,   8
+.set UNROLL,     4
+.set BLOCK_SIZE, 1024
 
 kernel_func:
     s_load_dwordx2         s[s_A:s_A+1], s[0:1], 0
     s_load_dword           s[s_i_per_block], s[0:1], 8
     s_load_dword           s[s_iter], s[0:1], 12
     s_waitcnt              lgkmcnt(0)
+    # blockIdx.x will be in s2
+    # we assume every iteration contains UNROLL vector reads
+    
+    s_mul_i32 s2, s2, s[s_i_per_block] ; current
+    v_add_u32_e32 v0, s2, v0 ; current + offset
+    v_mov_b32_e32 v1, 0
+    v_mov_b32_e32 v2, BLOCK_SIZE
+    v_mov_b32_e32 v3, 0
+    v_mov_b32_e32 v[s_accum], 0
+    v_mov_b32_e32 v[s_accum+1], 0
+    v_mov_b32_e32 v[s_accum+2], 0
+    v_mov_b32_e32 v[s_accum+3], 0
 
+    s_cmp_lt_i32 s[s_iter], 1
+    s_cbranch_scc1 .EXIT
+
+.UNROLLED_LOOP:
+    .cnt=0
+    .rept UNROLL
+        v_lshl_add_u64 v[s_tmp + .cnt:s_tmp + .cnt + 1], v[0:1], 4, s[s_A:s_A+1] ; move to the next vec4 (+16 bytes)
+        global_load_dwordx4 v[s_tmp + .cnt + 2:s_tmp + .cnt + 5], v[s_tmp + .cnt:s_tmp + .cnt + 1], off nt
+        v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3] ; offs += BLOCK_SIZE
+        .cnt = .cnt + 6
+    .endr
+
+    .wait_no = UNROLL-1
+    .cnt = 2
+    .rept UNROLL
+      # wait for the first load
+      s_waitcnt vmcnt(.wait_no)
+      v_pk_add_f32 v[s_accum : s_accum+1], v[s_accum : s_accum+1], v[s_tmp+.cnt: s_tmp+.cnt+1]
+      v_pk_add_f32 v[s_accum+2:s_accum+3], v[s_accum+2:s_accum+3], v[s_tmp+.cnt+2:s_tmp+.cnt+3]
+     .wait_no = .wait_no-1
+     .cnt = .cnt+6
+    .endr
+
+    s_add_i32 s[s_iter], s[s_iter], -1
+    s_cmp_gt_i32 s[s_iter], 0
+    s_cbranch_scc1 .UNROLLED_LOOP
+
+.EXIT:
     s_endpgm
 
 .rodata
