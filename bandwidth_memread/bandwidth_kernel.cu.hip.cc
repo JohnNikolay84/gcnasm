@@ -151,11 +151,15 @@ float bench_memread_kernel(void * B, void * A, int64_t dwords)
 
     struct {
         void * A;
+	uint32_t size;
+	uint32_t flags;
         uint32_t issues_per_block;
 	uint32_t iters;
     } args;
     size_t arg_size = sizeof(args);
     args.A = A;
+    args.size = dwords * sizeof(float);
+    args.flags = 0;
     args.issues_per_block = issues_per_block;
     args.iters = iters;
     void* config[] = {HIP_LAUNCH_PARAM_BUFFER_POINTER, &args, HIP_LAUNCH_PARAM_BUFFER_SIZE,
