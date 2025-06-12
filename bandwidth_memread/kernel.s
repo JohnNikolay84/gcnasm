@@ -36,7 +36,7 @@ kernel_func:
     .cnt=0
     .rept UNROLL
         v_lshl_add_u32 v[s_tmp + .cnt], v0, 4, 0 ; move to the next vec4 (+16 bytes)
-        buffer_load_dwordx4 v[s_tmp + .cnt + 2:s_tmp + .cnt + 5], v[s_tmp + .cnt], s[s_A:s_A+3], 0 idxen
+        buffer_load_dwordx4 v[s_tmp + .cnt + 2:s_tmp + .cnt + 5], v[s_tmp + .cnt], s[s_A:s_A+3], 0 offen
         v_lshl_add_u32 v0, v0, 0, v2 ; offs += BLOCK_SIZE
         .cnt = .cnt + 6
     .endr
@@ -82,7 +82,7 @@ amdhsa.kernels:
     .sgpr_count: 32
     .vgpr_count: 64
     .kernarg_segment_align: 4
-    .kernarg_segment_size: 16
+    .kernarg_segment_size: 24
     .group_segment_fixed_size: 65536
     .private_segment_fixed_size: 0
     .wavefront_size: 64
